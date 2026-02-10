@@ -195,149 +195,9 @@
             cursor: pointer;
         }
 
-        /* Settings */
-        .settings-btn {
-            position: fixed;
-            top: max(12px, env(safe-area-inset-top));
-            right: 12px;
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            font-size: 22px;
-            cursor: pointer;
-            padding: 10px;
-            opacity: 0.4;
-            transition: opacity 0.2s;
-        }
-
-        .settings-btn:hover { opacity: 0.7; }
-
-        .settings-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .settings-overlay.open {
-            display: flex;
-        }
-
-        .settings-panel {
-            background: var(--surface);
-            border-radius: 20px;
-            padding: 28px 24px;
-            width: 90%;
-            max-width: 340px;
-        }
-
-        .settings-panel h2 {
-            font-size: 18px;
-            font-weight: 500;
-            margin-bottom: 24px;
-        }
-
-        .setting-group-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-dim);
-            margin-top: 16px;
-            margin-bottom: 8px;
-        }
-
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-        }
-
-        .setting-row label {
-            font-size: 14px;
-            color: var(--text-dim);
-        }
-
-        .setting-row input {
-            width: 64px;
-            background: var(--bg);
-            border: 1px solid #2a2a3e;
-            border-radius: 8px;
-            color: var(--text);
-            padding: 8px;
-            font-size: 16px;
-            text-align: center;
-            outline: none;
-        }
-
-        .setting-row input:focus {
-            border-color: var(--accent);
-        }
-
-        .schedule-info {
-            margin-top: 4px;
-        }
-
-        .schedule-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 13px;
-            color: var(--text-dim);
-        }
-
-        .schedule-row .amt {
-            color: var(--success);
-            font-weight: 500;
-        }
-
-        .settings-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 24px;
-        }
-
-        .settings-actions button {
-            flex: 1;
-            padding: 13px;
-            border-radius: 12px;
-            border: none;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        .btn-cancel {
-            background: #2a2a3e;
-            color: var(--text);
-        }
-
-        .btn-save {
-            background: var(--accent);
-            color: white;
-        }
-
-        .btn-danger {
-            background: transparent;
-            color: var(--danger);
-            border: 1px solid rgba(248, 113, 113, 0.3);
-            margin-top: 12px;
-            width: 100%;
-            padding: 11px;
-            border-radius: 12px;
-            font-size: 13px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
-    <button class="settings-btn" id="settingsBtn" aria-label="Settings">&#9881;</button>
-
     <div class="container">
         <div class="points-display">
             <div class="points-label">Available</div>
@@ -356,26 +216,6 @@
     <div class="undo-toast" id="undoToast">
         <span>Used 1</span>
         <button class="undo-btn" id="undoBtn">Undo</button>
-    </div>
-
-    <div class="settings-overlay" id="settingsOverlay">
-        <div class="settings-panel">
-            <h2>Settings</h2>
-
-            <div class="setting-row">
-                <label>Current balance</label>
-                <input type="number" id="setBalance" min="0" inputmode="numeric">
-            </div>
-
-            <div class="setting-group-title">Schedule</div>
-            <div class="schedule-info" id="scheduleInfo"></div>
-
-            <div class="settings-actions">
-                <button class="btn-cancel" id="cancelBtn">Cancel</button>
-                <button class="btn-save" id="saveBtn">Save</button>
-            </div>
-            <button class="btn-danger" id="resetBtn">Reset All Data</button>
-        </div>
     </div>
 
     <script>
@@ -402,8 +242,6 @@
         const $next = document.getElementById('nextRefill');
         const $zero = document.getElementById('zeroMessage');
         const $toast = document.getElementById('undoToast');
-        const $settingsOverlay = document.getElementById('settingsOverlay');
-        const $setBalance = document.getElementById('setBalance');
 
         // ── Persistence ─────────────────────────────────────────
         function load() {
@@ -414,11 +252,11 @@
                     points = Math.max(0, s.points || 0);
                     lastProcessed = s.lastProcessed ? new Date(s.lastProcessed) : new Date();
                 } else {
-                    points = 0;
+                    points = 3;
                     lastProcessed = new Date();
                 }
             } catch {
-                points = 0;
+                points = 3;
                 lastProcessed = new Date();
             }
         }
@@ -557,59 +395,9 @@
             }
         }
 
-        // ── Settings ────────────────────────────────────────────
-        function openSettings() {
-            $setBalance.value = points;
-
-            // Render schedule info
-            var html = '';
-            for (var i = 0; i < SCHEDULE.length; i++) {
-                var s = SCHEDULE[i];
-                html += '<div class="schedule-row"><span>' + s.label +
-                    ' at 4:00 PM</span><span class="amt">+' + s.amount + '</span></div>';
-            }
-            document.getElementById('scheduleInfo').innerHTML = html;
-
-            $settingsOverlay.classList.add('open');
-        }
-
-        function closeSettings() {
-            $settingsOverlay.classList.remove('open');
-        }
-
-        function saveSettings() {
-            var v = parseInt($setBalance.value);
-            if (!isNaN(v) && v >= 0) {
-                points = v;
-                save();
-                render();
-            }
-            closeSettings();
-        }
-
-        function resetAll() {
-            if (confirm('Reset all data? This cannot be undone.')) {
-                localStorage.removeItem('balance_state');
-                points = 0;
-                lastProcessed = new Date();
-                save();
-                render();
-                closeSettings();
-            }
-        }
-
         // ── Event listeners ─────────────────────────────────────
         $btn.addEventListener('click', usePoint);
         document.getElementById('undoBtn').addEventListener('click', undoUse);
-        document.getElementById('settingsBtn').addEventListener('click', openSettings);
-        document.getElementById('cancelBtn').addEventListener('click', closeSettings);
-        document.getElementById('saveBtn').addEventListener('click', saveSettings);
-        document.getElementById('resetBtn').addEventListener('click', resetAll);
-
-        // Close settings on overlay click
-        $settingsOverlay.addEventListener('click', function(e) {
-            if (e.target === $settingsOverlay) closeSettings();
-        });
 
         // ── Lifecycle ───────────────────────────────────────────
         function tick() {
