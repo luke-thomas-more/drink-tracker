@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f0f1a">
+    <title>Balance</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%237c5cbf'/><text x='50' y='68' text-anchor='middle' font-size='50' font-family='sans-serif' fill='white' font-weight='300'>B</text></svg>">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --accent: #7c5cbf;
+            --accent-glow: rgba(124, 92, 191, 0.25);
+            --accent-light: #a78bfa;
+            --text: #e8e8f0;
+            --text-dim: #6b6b85;
+            --success: #4ade80;
+            --danger: #f87171;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: env(safe-area-inset-top) 20px env(safe-area-inset-bottom);
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 36px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .points-display {
+            text-align: center;
+        }
+
+        .points-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .points-value {
+            font-size: 128px;
+            font-weight: 200;
+            line-height: 1;
+            color: var(--text);
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        .points-value.zero {
+            color: var(--text-dim);
+        }
+
+        .points-value.pop {
+            transform: scale(0.85);
+            opacity: 0.4;
+        }
+
+        .use-btn {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            background: transparent;
+            color: var(--accent-light);
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            outline: none;
+            box-shadow: 0 0 0 0 var(--accent-glow);
+        }
+
+        .use-btn:hover {
+            box-shadow: 0 0 30px 0 var(--accent-glow);
+        }
+
+        .use-btn:active:not(:disabled) {
+            transform: scale(0.93);
+            background: rgba(124, 92, 191, 0.12);
+            box-shadow: 0 0 40px 5px var(--accent-glow);
+        }
+
+        .use-btn:disabled {
+            border-color: #2a2a3a;
+            color: #3a3a50;
+            cursor: default;
+            box-shadow: none;
+        }
+
+        .next-refill {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .next-refill strong {
+            color: var(--accent-light);
+            font-weight: 500;
+        }
+
+        .zero-message {
+            color: var(--text-dim);
+            font-size: 14px;
+            text-align: center;
+            line-height: 1.6;
+            display: none;
+        }
+
+        .zero-message.visible {
+            display: block;
+        }
+
+        /* Fly-up animation for additions */
+        .add-fly {
+            position: fixed;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, 0);
+            font-size: 44px;
+            font-weight: 300;
+            color: var(--success);
+            pointer-events: none;
+            z-index: 50;
+            animation: flyUp 1.8s ease-out forwards;
+        }
+
+        @keyframes flyUp {
+            0% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -80px); }
+        }
+
+        /* Undo toast */
+        .undo-toast {
+            position: fixed;
+            bottom: max(32px, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%) translateY(120px);
+            background: var(--surface);
+            border: 1px solid #2a2a3e;
+            border-radius: 14px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 14px;
+            color: var(--text-dim);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+        }
+
+        .undo-toast.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .undo-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Settings */
+        .settings-btn {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 10px;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+        }
+
+        .settings-btn:hover { opacity: 0.7; }
+
+        .settings-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-overlay.open {
+            display: flex;
+        }
+
+        .settings-panel {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 90%;
+            max-width: 340px;
+        }
+
+        .settings-panel h2 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .setting-group-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .setting-row label {
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .setting-row input {
+            width: 64px;
+            background: var(--bg);
+            border: 1px solid #2a2a3e;
+            border-radius: 8px;
+            color: var(--text);
+            padding: 8px;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+        }
+
+        .setting-row input:focus {
+            border-color: var(--accent);
+        }
+
+        .schedule-info {
+            margin-top: 4px;
+        }
+
+        .schedule-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .schedule-row .amt {
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .settings-actions button {
+            flex: 1;
+            padding: 13px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #2a2a3e;
+            color: var(--text);
+        }
+
+        .btn-save {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            margin-top: 12px;
+            width: 100%;
+            padding: 11px;
+            border-radius: 12px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button class="settings-btn" id="settingsBtn" aria-label="Settings">&#9881;</button>
+
+    <div class="container">
+        <div class="points-display">
+            <div class="points-label">Available</div>
+            <div class="points-value" id="pointsValue">0</div>
+        </div>
+
+        <button class="use-btn" id="useBtn">Use 1</button>
+
+        <div class="next-refill" id="nextRefill"></div>
+
+        <div class="zero-message" id="zeroMessage">
+            All used up for now.<br>More coming soon.
+        </div>
+    </div>
+
+    <div class="undo-toast" id="undoToast">
+        <span>Used 1</span>
+        <button class="undo-btn" id="undoBtn">Undo</button>
+    </div>
+
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <h2>Settings</h2>
+
+            <div class="setting-row">
+                <label>Current balance</label>
+                <input type="number" id="setBalance" min="0" inputmode="numeric">
+            </div>
+
+            <div class="setting-group-title">Schedule</div>
+            <div class="schedule-info" id="scheduleInfo"></div>
+
+            <div class="settings-actions">
+                <button class="btn-cancel" id="cancelBtn">Cancel</button>
+                <button class="btn-save" id="saveBtn">Save</button>
+            </div>
+            <button class="btn-danger" id="resetBtn">Reset All Data</button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Schedule config ─────────────────────────────────────
+        const SCHEDULE = [
+            { day: 1, hour: 16, amount: 1, label: 'Monday' },
+            { day: 3, hour: 16, amount: 1, label: 'Wednesday' },
+            { day: 5, hour: 16, amount: 3, label: 'Friday' },
+            { day: 6, hour: 16, amount: 3, label: 'Saturday' },
+        ];
+
+        // ── State ───────────────────────────────────────────────
+        let points = 0;
+        let lastProcessed = null;
+        let undoTimer = null;
+        let undoPrevPoints = null;
+
+        // ── DOM refs ────────────────────────────────────────────
+        const $points = document.getElementById('pointsValue');
+        const $btn = document.getElementById('useBtn');
+        const $next = document.getElementById('nextRefill');
+        const $zero = document.getElementById('zeroMessage');
+        const $toast = document.getElementById('undoToast');
+        const $settingsOverlay = document.getElementById('settingsOverlay');
+        const $setBalance = document.getElementById('setBalance');
+
+        // ── Persistence ─────────────────────────────────────────
+        function load() {
+            try {
+                const raw = localStorage.getItem('balance_state');
+                if (raw) {
+                    const s = JSON.parse(raw);
+                    points = Math.max(0, s.points || 0);
+                    lastProcessed = s.lastProcessed ? new Date(s.lastProcessed) : new Date();
+                } else {
+                    points = 0;
+                    lastProcessed = new Date();
+                }
+            } catch {
+                points = 0;
+                lastProcessed = new Date();
+            }
+        }
+
+        function save() {
+            localStorage.setItem('balance_state', JSON.stringify({
+                points: points,
+                lastProcessed: lastProcessed.toISOString()
+            }));
+        }
+
+        // ── Schedule processing ─────────────────────────────────
+        function processSchedule() {
+            const now = new Date();
+            if (!lastProcessed) {
+                lastProcessed = now;
+                save();
+                return 0;
+            }
+
+            let added = 0;
+            const cursor = new Date(lastProcessed);
+            cursor.setHours(0, 0, 0, 0);
+
+            // Safety: max 90 days look-back
+            for (let i = 0; i < 90 && cursor <= now; i++) {
+                const dow = cursor.getDay();
+                for (const entry of SCHEDULE) {
+                    if (entry.day === dow) {
+                        const t = new Date(cursor);
+                        t.setHours(entry.hour, 0, 0, 0);
+                        if (t > lastProcessed && t <= now) {
+                            added += entry.amount;
+                        }
+                    }
+                }
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            lastProcessed = now;
+            if (added > 0) {
+                points += added;
+            }
+            save();
+            return added;
+        }
+
+        // ── Next refill ─────────────────────────────────────────
+        function getNextRefill() {
+            const now = new Date();
+            let best = null;
+            let bestTime = null;
+
+            for (let week = 0; week < 2; week++) {
+                for (const entry of SCHEDULE) {
+                    const d = new Date(now);
+                    const diff = entry.day - d.getDay() + week * 7;
+                    d.setDate(d.getDate() + diff);
+                    d.setHours(entry.hour, 0, 0, 0);
+                    if (d > now && (!bestTime || d < bestTime)) {
+                        bestTime = d;
+                        best = entry;
+                    }
+                }
+            }
+
+            return best && bestTime ? { entry: best, time: bestTime } : null;
+        }
+
+        function formatRelative(date) {
+            const ms = date - new Date();
+            if (ms < 0) return 'now';
+            const mins = Math.floor(ms / 60000);
+            const hrs = Math.floor(mins / 60);
+            const days = Math.floor(hrs / 24);
+            if (days > 0) return 'in ' + days + 'd ' + (hrs % 24) + 'h';
+            if (hrs > 0) return 'in ' + hrs + 'h ' + (mins % 60) + 'm';
+            return 'in ' + Math.max(1, mins) + 'm';
+        }
+
+        // ── Render ──────────────────────────────────────────────
+        function render() {
+            $points.textContent = points;
+            $points.classList.toggle('zero', points <= 0);
+            $btn.disabled = points <= 0;
+            $zero.classList.toggle('visible', points <= 0);
+
+            const nr = getNextRefill();
+            if (nr) {
+                $next.innerHTML = 'Next: <strong>+' + nr.entry.amount + '</strong> ' +
+                    nr.entry.label + ' 4 PM &middot; ' + formatRelative(nr.time);
+            } else {
+                $next.textContent = '';
+            }
+        }
+
+        function showAddAnimation(amount) {
+            const el = document.createElement('div');
+            el.className = 'add-fly';
+            el.textContent = '+' + amount;
+            document.body.appendChild(el);
+            el.addEventListener('animationend', function() { el.remove(); });
+        }
+
+        // ── Actions ─────────────────────────────────────────────
+        function usePoint() {
+            if (points <= 0) return;
+
+            undoPrevPoints = points;
+            points--;
+            save();
+
+            // Pop animation
+            $points.classList.add('pop');
+            setTimeout(function() { $points.classList.remove('pop'); }, 150);
+
+            render();
+
+            // Undo toast
+            $toast.classList.add('visible');
+            if (undoTimer) clearTimeout(undoTimer);
+            undoTimer = setTimeout(function() {
+                $toast.classList.remove('visible');
+                undoPrevPoints = null;
+            }, 5000);
+        }
+
+        function undoUse() {
+            if (undoPrevPoints !== null) {
+                points = undoPrevPoints;
+                undoPrevPoints = null;
+                save();
+                render();
+                $toast.classList.remove('visible');
+                if (undoTimer) clearTimeout(undoTimer);
+            }
+        }
+
+        // ── Settings ────────────────────────────────────────────
+        function openSettings() {
+            $setBalance.value = points;
+
+            // Render schedule info
+            var html = '';
+            for (var i = 0; i < SCHEDULE.length; i++) {
+                var s = SCHEDULE[i];
+                html += '<div class="schedule-row"><span>' + s.label +
+                    ' at 4:00 PM</span><span class="amt">+' + s.amount + '</span></div>';
+            }
+            document.getElementById('scheduleInfo').innerHTML = html;
+
+            $settingsOverlay.classList.add('open');
+        }
+
+        function closeSettings() {
+            $settingsOverlay.classList.remove('open');
+        }
+
+        function saveSettings() {
+            var v = parseInt($setBalance.value);
+            if (!isNaN(v) && v >= 0) {
+                points = v;
+                save();
+                render();
+            }
+            closeSettings();
+        }
+
+        function resetAll() {
+            if (confirm('Reset all data? This cannot be undone.')) {
+                localStorage.removeItem('balance_state');
+                points = 0;
+                lastProcessed = new Date();
+                save();
+                render();
+                closeSettings();
+            }
+        }
+
+        // ── Event listeners ─────────────────────────────────────
+        $btn.addEventListener('click', usePoint);
+        document.getElementById('undoBtn').addEventListener('click', undoUse);
+        document.getElementById('settingsBtn').addEventListener('click', openSettings);
+        document.getElementById('cancelBtn').addEventListener('click', closeSettings);
+        document.getElementById('saveBtn').addEventListener('click', saveSettings);
+        document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+        // Close settings on overlay click
+        $settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === $settingsOverlay) closeSettings();
+        });
+
+        // ── Lifecycle ───────────────────────────────────────────
+        function tick() {
+            var added = processSchedule();
+            if (added > 0) showAddAnimation(added);
+            render();
+        }
+
+        // On visibility change (app foregrounded)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) tick();
+        });
+
+        // Periodic check every 30 seconds
+        setInterval(tick, 30000);
+
+        // ── Init ────────────────────────────────────────────────
+        load();
+        tick();
+
+        // ── Service worker ──────────────────────────────────────
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        }
+    })();
+    </script>
+</body>
+</html>
